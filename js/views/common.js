@@ -1,0 +1,18 @@
+export const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export const number=value=>Number(value||0).toLocaleString('en-US');
+export const km=value=>Number.isFinite(value)?`${Number.isInteger(value)?value:value.toFixed(1)} km`:'—';
+export const kg=value=>`${number(value)} kg`;
+export const pct=value=>`${Number(value||0).toFixed(0)}%`;
+export const badge=(text,type='neutral')=>`<span class="badge badge-${type}"><i></i>${escapeHtml(text)}</span>`;
+export const sectionHead=(eyebrow,title,description,actions='')=>`<div class="section-head"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1><p>${description}</p></div>${actions?`<div class="head-actions">${actions}</div>`:''}</div>`;
+export const statCard=(label,value,detail,icon,accent='cyan')=>`<article class="stat-card accent-${accent}"><div class="stat-top"><span>${label}</span><span class="stat-icon icon-${icon}">${iconSvg(icon)}</span></div><strong>${value}</strong><small>${detail}</small></article>`;
+export function iconSvg(name){
+ const paths={grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',network:'<circle cx="5" cy="12" r="2"/><circle cx="18" cy="5" r="2"/><circle cx="18" cy="19" r="2"/><path d="m7 11 9-5M7 13l9 5"/>',route:'<circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h4a4 4 0 0 0 4-4V6"/>',tree:'<circle cx="12" cy="5" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M12 7v5m0 0-6 4m6-4 6 4"/>',box:'<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="M3 8v9l9 5 9-5V8m-9 5v9"/>',truck:'<path d="M3 6h12v12H3zM15 10h4l3 3v5h-7"/><circle cx="7.5" cy="18" r="2"/><circle cx="18.5" cy="18" r="2"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',venn:'<circle cx="9" cy="12" r="7"/><circle cx="15" cy="12" r="7"/>',bars:'<path d="M4 19V5m0 14h17M8 15h3v2H8zm5-6h3v8h-3zm5-4h3v12h-3z"/>',chart:'<path d="M4 19V5m0 14h17M8 15h3v2H8zm5-6h3v8h-3zm5-4h3v12h-3z"/>',book:'<path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 0 4 22z"/><path d="M4 4.5v15A2.5 2.5 0 0 1 6.5 17H20"/>',info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/>',download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5 5 5-5m-5 5V3"/>',play:'<path d="m8 5 12 7-12 7z"/>',pause:'<path d="M8 5h3v14H8zm6 0h3v14h-3z"/>',reset:'<path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/>',chevron:'<path d="m9 18 6-6-6-6"/>',menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',close:'<path d="m18 6-12 12M6 6l12 12"/>',spark:'<path d="m12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2L12 3Z"/>',check:'<path d="m5 12 4 4L19 6"/>',plus:'<path d="M12 5v14m-7-7h14"/>'};
+ return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||paths.info}</svg>`;
+}
+export const button=(label,action,variant='secondary',icon='')=>`<button class="button button-${variant}" data-action="${action}">${icon?iconSvg(icon):''}<span>${label}</span></button>`;
+export function barRow(label,value,max,color='#4fd7d0',suffix=''){
+ const width=max?Math.max(0,Math.min(100,value/max*100)):0;
+ return `<div class="bar-row"><div class="bar-label"><span>${label}</span><b>${suffix||number(value)}</b></div><div class="bar-track"><span style="width:${width}%;--bar-color:${color}"></span></div></div>`;
+}
+export const emptyState=(title,copy)=>`<div class="empty-state"><span class="empty-mark">∅</span><b>${title}</b><p>${copy}</p></div>`;

@@ -1,0 +1,33 @@
+import { sectionHead,button,badge,number,kg,km,pct } from './common.js';
+import { networkSvg } from './network-svg.js';
+
+export function routesPage(state,d){
+ const routes=d.routeData;
+ const cards=routes.map(r=>`<article class="route-card" style="--vehicle:${r.color}"><div class="route-card-head"><span class="vehicle-chip">V${String(r.id).padStart(2,'0')}</span><div><small>VEHICLE ${String(r.id).padStart(2,'0')}</small><h3>${r.serves.map(id=>`Village ${id}`).join(' + ')}</h3></div>${badge(r.feasible?(r.overCapacity?'Over capacity':'Feasible'):'Road blocked',!r.feasible||r.overCapacity?'danger':'success')}</div><div class="route-itinerary"><small>DELIVERY ITINERARY</small><b>${r.path.join(' <span>→</span> ')}</b></div><div class="route-metrics"><div><small>Route distance</small><b>${r.feasible?km(r.total):'Unavailable'}</b></div><div><small>Cargo load</small><b>${kg(r.load)}</b></div><div><small>Capacity used</small><b>${pct(r.utilization)}</b></div></div><div class="capacity-track"><i style="width:${Math.min(100,r.utilization)}%"></i></div>${!r.feasible?`<p class="route-warning">${r.reason}</p>`:r.overCapacity?'<p class="route-warning">This illustrative route exceeds current capacity. Increase capacity or revise the plan.</p>':''}<div class="route-serves"><span>Villages covered</span><b>${r.serves.join(' · ')}</b></div></article>`).join('');
+ const status=state.routeStatus==='running'?'Simulation running':state.routeStatus==='paused'?'Paused':state.routeStatus==='complete'?'Complete':'Ready';
+ const actions=state.routeStatus==='running'?`${button('Pause','pause-route','secondary','pause')}${button('Reset','reset-route','quiet','reset')}`:state.routeStatus==='paused'?`${button('Resume','resume-route','primary','play')}${button('Reset','reset-route','secondary','reset')}`:`${button(state.routeStatus==='complete'?'Run again':'Run simulation','start-route','primary','play')}${button('Reset','reset-route','quiet','reset')}`;
+ return `${sectionHead('VEHICLE DISPATCH · ILLUSTRATIVE','Plan vehicle routes','The project’s original route sequences are shown with distance recalculated from the active road network.',actions)}
+ <div class="route-status-bar panel"><div class="route-status-title"><span class="status-pulse ${state.routeStatus==='running'?'is-running':''}"></span><div><b>${status}</b><small>Route animation is illustrative and not a globally optimal vehicle routing solution.</small></div></div><div class="route-progress"><span>Simulation progress</span><div class="progress-track"><i style="width:${state.routeProgress*100}%"></i></div><b>${Math.round(state.routeProgress*100)}%</b></div></div>
+ <section class="panel route-map-panel"><div class="panel-heading"><div><div class="eyebrow">ROUTE VISUALIZATION</div><h2>Vehicle movement across the network</h2></div><div class="route-legend"><span><i style="--vehicle:#50d9cb"></i> Vehicle 01</span><span><i style="--vehicle:#72a7ff"></i> Vehicle 02</span></div></div><div class="network-canvas route-canvas">${networkSvg(state,{routeData:routes,animated:true})}</div></section>
+ <div class="route-cards">${cards}</div>
+ <div class="route-total panel"><div><small>TOTAL FLEET TRAVEL</small><b>${d.fleetKm===null?'Unavailable':`${number(d.fleetKm)} vehicle-km`}</b><span>Sum of the illustrative vehicle routes</span></div><div class="route-total-note"><b>Route plans are separate from the MST.</b><p>The MST connects each graph node once. Delivery routes revisit roads to serve villages and return to the warehouse.</p></div></div>
+ ${d.routesFeasible?'':'<div class="warning-callout">One or more route legs use a closed or deleted road. The route total is unavailable and simulation playback is disabled until the network is feasible.</div>'}`;
+}
+
+function clockTime(minutes){const mins=Math.round(minutes),h=(8+Math.floor(mins/60))%24,m=mins%60;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;}
+export function schedulePage(state,d){
+ const rows=d.routeData.map(r=>{
+  if(!r.feasible)return `<section class="panel schedule-route"><div class="panel-heading"><h2>Vehicle ${String(r.id).padStart(2,'0')}</h2>${badge('Route unavailable','danger')}</div><p>${r.reason}</p></section>`;
+  let elapsed=0;const events=[];const served=new Set(r.serves);
+  r.legs.forEach((leg,index)=>{
+    const depart=elapsed;elapsed+=leg.km/Number(state.speed||1)*60;
+    const village=state.villages.find(v=>v.id===leg.b);
+    if(served.has(leg.b)&&village){const arrival=elapsed;const service=Number(village.unload);events.push({id:leg.b,arrival,departure:arrival+service,service,distance:leg.km});elapsed+=service;served.delete(leg.b);}
+  });
+  const travel=r.total/Number(state.speed||1)*60,returnAt=elapsed;
+  return `<section class="panel schedule-route"><div class="panel-heading"><div><div class="eyebrow">VEHICLE ${String(r.id).padStart(2,'0')}</div><h2>${r.serves.map(id=>'Village '+id).join(' + ')}</h2></div>${badge(`${km(r.total)} route`,'neutral')}</div><div class="timeline-track"><div class="timeline-line"></div>${events.map((e,i)=>`<div class="timeline-event" style="--event-index:${i}"><span class="timeline-dot" style="--dot-color:${r.color}"></span><small>ARRIVE ${clockTime(e.arrival)}</small><b>Village ${e.id}</b><span>Unload ${e.service} min</span><small>DEPART ${clockTime(e.departure)}</small></div>`).join('')}<div class="timeline-event timeline-return"><span class="timeline-dot return-dot"></span><small>RETURN</small><b>Warehouse</b><span>${clockTime(returnAt)}</span></div></div><div class="schedule-footer"><span>Depart warehouse <b>08:00</b></span><span>Travel time <b>${travel.toFixed(0)} min</b></span><span>Estimated return <b>${clockTime(returnAt)}</b></span></div></section>`;
+ }).join('');
+ return `${sectionHead('TRAVEL TIME · ESTIMATES','Delivery timeline','Illustrative arrival and return estimates from route distance, average speed, and village unloading times.',button('Print / save as PDF','print','secondary','download'))}
+ <div class="schedule-settings panel"><label class="field-label">Average speed<div class="input-wrap"><input type="number" min="1" step="1" data-field="speed" value="${state.speed}"/><span>km / h</span></div></label><div class="unload-settings"><b>Unloading duration</b>${state.villages.map(v=>`<label><span>Village ${v.id}</span><input type="number" min="0" step="1" data-field="unload" data-id="${v.id}" value="${v.unload}"/><small>min</small></label>`).join('')}</div></div>
+ <div class="schedule-cards">${rows}</div><div class="info-callout"><b>Illustrative estimate:</b> schedules start at 08:00 and assume constant speed, no congestion or road delays, and one unloading stop at each assigned village. These are not live delivery times.</div>`;
+}
